@@ -156,10 +156,10 @@ type ValuationData = typeof DEFAULT_VAL;
 
 export default function AcquisitionPage() {
   const [scrolled, setScrolled] = useState(false);
-  const [acq, setAcq] = useState<typeof DEFAULT_ACQ | null>(null);
-  const [dil, setDil] = useState<typeof DEFAULT_DILIGENCE | null>(null);
-  const [val, setVal] = useState<ValuationData | null>(null);
-  const [rollup, setRollup] = useState<RollupData | null>(null);
+  const [acq, setAcq] = useState<typeof DEFAULT_ACQ>(DEFAULT_ACQ);
+  const [dil, setDil] = useState<typeof DEFAULT_DILIGENCE>(DEFAULT_DILIGENCE);
+  const [val, setVal] = useState<ValuationData>(DEFAULT_VAL);
+  const [rollup, setRollup] = useState<RollupData>(DEFAULT_ROLLUP);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
