@@ -126,29 +126,44 @@ const DEFAULT_ROLLUP: RollupData = {
 };
 
 const DEFAULT_VAL = {
-  enterpriseValue: 925000,
-  ebitda: 185000,
-  ebitdaMarginPct: 22.0,
-  currentMultiple: 5.0,
-  multipleRange: { floor: 2, ceiling: 12 },
-  multiplePercentile: 42,
-  multipleDrivers: {
-    ebitdaMargin: { score: 85, weight: 0.30, contribution: 25.5, detail: "22.0% margin" },
-    revenueScale: { score: 50, weight: 0.20, contribution: 10.0, detail: "$420k revenue" },
-    arHealth: { score: 60, weight: 0.15, contribution: 9.0, detail: "78.0% current" },
-    techUtilization: { score: 60, weight: 0.10, contribution: 6.0, detail: "60.0% utilization" },
-    integrationDensity: { score: 40, weight: 0.10, contribution: 4.0, detail: "1 integrations" },
-    profitLeakage: { score: 60, weight: 0.15, contribution: 9.0, detail: "22.0% cost ratio" },
+  companyId: "companyA",
+  valuation: {
+    enterpriseValue: 925000,
+    ebitda: 185000,
+    ebitdaMarginPct: 22.0,
+    currentMultiple: 5.0,
+    benchmarkMultiple: 6.2,
+    multiplePercentile: 42,
+    multipleRange: { floor: 4.0, ceiling: 8.5 },
   },
-  potentialAtMultiple: { "5x": 925000, "8x": 1480000, "10x": 1850000, "12x": 2220000 },
-  upsidePotentialPct: 140,
+  valueDrivers: {
+    ebitdaMargin: { score: 85, weight: 0.30, contribution: 2.55, detail: "22.0% margin (47% above 15% institutional floor)", benchmark: "15% (mid-market minimum); 18% (strong performer); 22%+ (top quartile)" },
+    revenueScale: { score: 60, weight: 0.20, contribution: 1.2, detail: "$420k annualized revenue", benchmark: "Supports 5x–7x multiple in field service cohort" },
+    arHealth: { score: 60, weight: 0.15, contribution: 0.9, detail: "78.0% of AR current; 22% aged 30+ days", benchmark: "Institutional buyers require 70%+ current; flag risk above 30%" },
+    techUtilization: { score: 60, weight: 0.10, contribution: 0.6, detail: "60.0% technician billable hours", benchmark: "80%+ utilization expected post-acquisition; gap = growth leverage" },
+    integrationDensity: { score: 40, weight: 0.10, contribution: 0.4, detail: "1 data source connected (ServiceTitan); SaaS stack incomplete", benchmark: "3+ integrated sources = higher predictability score; attracts PE/strategic buyers" },
+    profitLeakage: { score: 60, weight: 0.15, contribution: 0.9, detail: "22.0% cost-to-revenue ratio; gross margin 78%", benchmark: "Acceptable range 18%–25%; >25% signals operational drag" },
+  },
+  scenarios: {
+    conservative: { multiple: 4.0, enterpriseValue: 740000 },
+    midpoint: { multiple: 5.0, enterpriseValue: 925000 },
+    optimistic: { multiple: 8.5, enterpriseValue: 1572500 },
+  },
   signals: [
-    { type: "positive" as const, metric: "EBITDA Margin", message: "EBITDA margin is 22.0% — above the 15% institutional benchmark.", impact: "raises_multiple" },
-    { type: "positive" as const, metric: "Revenue Scale", message: "Annualized revenue of $420k — qualifies for institutional-grade multiples.", impact: "raises_multiple" },
-    { type: "negative" as const, metric: "AR Health", message: "78.0% of AR is current — collection risk present.", impact: "lowers_multiple" },
-    { type: "info" as const, metric: "Tech Utilization", message: "Technician utilization at 60.0% — room for schedule optimization.", impact: "neutral" },
-    { type: "info" as const, metric: "Data Integration", message: "1 data source connected — connect more sources for higher valuation confidence.", impact: "neutral" },
+    { type: "strength" as const, metric: "EBITDA Margin", message: "22.0% EBITDA margin exceeds institutional 15% floor and mid-market 18% threshold.", impact: "raises_multiple", magnitude: 150 },
+    { type: "strength" as const, metric: "Revenue Quality", message: "$420k annualized revenue places company in institutional buyer target band.", impact: "raises_multiple", magnitude: 100 },
+    { type: "concern" as const, metric: "AR Aging", message: "22% of receivables aged >30 days. Institutional buyers benchmark 70% current.", impact: "lowers_multiple", magnitude: -75 },
+    { type: "concern" as const, metric: "Technician Utilization", message: "60% billable utilization is 25% below mid-market standard (80%).", impact: "lowers_multiple", magnitude: -100 },
+    { type: "neutral" as const, metric: "Data Integration", message: "Single integration source (ServiceTitan) limits visibility.", impact: "neutral", magnitude: 0 },
   ],
+  riskFactors: [
+    "Customer Concentration: Verify revenue distribution; >20% concentration increases buyer risk premium.",
+    "Technician Attrition: 60% utilization gap may signal retention or scheduling risk.",
+    "Revenue Seasonality: Confirm revenue trending; seasonal dips >15% adjust multiple downward.",
+    "Pricing Power: Competitive pressure limits margin expansion post-deal.",
+    "Legacy Systems: Non-integrated backend systems increase integration capex.",
+  ],
+  valuationReadiness: "medium" as const,
   generatedAt: new Date().toISOString(),
 };
 
@@ -156,8 +171,8 @@ type ValuationData = typeof DEFAULT_VAL;
 
 export default function AcquisitionPage() {
   const [scrolled, setScrolled] = useState(false);
-  const [acq, setAcq] = useState<typeof DEFAULT_ACQ>(DEFAULT_ACQ);
-  const [dil, setDil] = useState<typeof DEFAULT_DILIGENCE>(DEFAULT_DILIGENCE);
+  const [acq, setAcq] = useState(DEFAULT_ACQ);
+  const [dil, setDil] = useState(DEFAULT_DILIGENCE);
   const [val, setVal] = useState<ValuationData>(DEFAULT_VAL);
   const [rollup, setRollup] = useState<RollupData>(DEFAULT_ROLLUP);
   const [loading, setLoading] = useState(true);
@@ -185,6 +200,8 @@ export default function AcquisitionPage() {
   function driverColor(score: number) {
     return score >= 70 ? "text-emerald-400" : score >= 40 ? "text-amber-400" : "text-red-400";
   }
+
+  const v = val.valuation;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -226,29 +243,43 @@ export default function AcquisitionPage() {
                   <div className="flex items-center justify-between mb-6">
                     <div>
                       <h2 className="text-2xl font-bold text-white">Live Enterprise Value</h2>
-                      <p className="text-sm text-slate-400 mt-1">Updated {new Date(val.generatedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}</p>
+                      <p className="text-sm text-slate-400 mt-1">Updated {new Date(val.generatedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })} &middot; <span className="text-amber-400 font-medium">{val.valuationReadiness === "high" ? "High Readiness" : val.valuationReadiness === "medium" ? "Medium Readiness" : "Low Readiness"}</span></p>
                     </div>
                     <div className="text-right">
-                      <div className="text-4xl font-bold text-white">{fmt(val.enterpriseValue)}</div>
-                      <div className="text-sm text-slate-400 mt-1">{val.currentMultiple}x EBITDA &middot; {fmt(val.ebitda)} EBITDA</div>
+                      <div className="text-4xl font-bold text-white">{fmt(v.enterpriseValue)}</div>
+                      <div className="text-sm text-slate-400 mt-1">{v.currentMultiple}x EBITDA &middot; {fmt(v.ebitda)} EBITDA</div>
                     </div>
                   </div>
 
                   {/* Multiple Range Bar */}
                   <div className="mb-8">
                     <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-                      <span>2x ({fmt(val.ebitda * 2)})</span>
-                      <span className="text-sky-300 font-semibold">{val.currentMultiple}x &mdash; {val.multiplePercentile}% of ceiling</span>
-                      <span>12x ({fmt(val.ebitda * 12)})</span>
+                      <span>{fmt(v.multipleRange.floor)}x</span>
+                      <span className="text-sky-300 font-semibold">{v.currentMultiple}x &mdash; {v.multiplePercentile}% percentile</span>
+                      <span>{fmt(v.multipleRange.ceiling)}x</span>
                     </div>
                     <div className="relative h-3 w-full rounded-full bg-slate-800 overflow-hidden">
-                      <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-emerald-400 transition-all duration-1000" style={{ width: `${val.multiplePercentile}%` }} />
+                      <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-emerald-400 transition-all duration-1000" style={{ width: `${v.multiplePercentile}%` }} />
                     </div>
                   </div>
 
-                  {/* Multiple Drivers */}
+                  {/* Scenarios */}
+                  <div className="grid gap-3 sm:grid-cols-3 mb-6">
+                    {Object.entries(val.scenarios).map(([key, scenario]) => {
+                      const isCurrent = scenario.multiple === v.currentMultiple;
+                      return (
+                        <div key={key} className={`rounded-xl border p-4 text-center transition-all ${isCurrent ? "border-sky-400/40 bg-sky-400/10" : "border-white/10 bg-slate-900/30"}`}>
+                          <div className="text-xs text-slate-400 mb-1 capitalize">{key}</div>
+                          <div className="text-lg font-bold text-white">{fmt(scenario.enterpriseValue)}</div>
+                          <div className="text-xs text-slate-500">{scenario.multiple}x</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Value Drivers */}
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6">
-                    {Object.entries(val.multipleDrivers).map(([key, driver]) => (
+                    {Object.entries(val.valueDrivers).map(([key, driver]: [string, any]) => (
                       <div key={key} className="rounded-xl border border-white/10 bg-slate-900/40 p-4">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">{key.replace(/([A-Z])/g, " $1").trim()}</span>
@@ -259,40 +290,42 @@ export default function AcquisitionPage() {
                           <span>{driver.detail}</span>
                           <span>Weight: {(driver.weight * 100).toFixed(0)}%</span>
                         </div>
+                        {driver.benchmark && (
+                          <div className="mt-2 text-[10px] text-slate-600 italic border-t border-white/5 pt-2">{driver.benchmark}</div>
+                        )}
                       </div>
                     ))}
                   </div>
 
-                  {/* Potential at Multiples */}
-                  <div className="grid gap-3 sm:grid-cols-4 mb-6">
-                    {Object.entries(val.potentialAtMultiple).map(([multiple, value]) => {
-                      const isCurrent = parseFloat(multiple) === val.currentMultiple;
-                      return (
-                        <div key={multiple} className={`rounded-xl border p-4 text-center transition-all ${isCurrent ? "border-sky-400/40 bg-sky-400/10" : "border-white/10 bg-slate-900/30"}`}>
-                          <div className="text-xs text-slate-400 mb-1">{isCurrent ? "Current" : "Target"}</div>
-                          <div className="text-lg font-bold text-white">{fmt(value)}</div>
-                          <div className="text-xs text-slate-500">{multiple}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Valuation Signals */}
-                  <div className="rounded-xl border border-white/10 bg-slate-900/30 p-4">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Valuation Signals</h3>
+                  {/* Signals */}
+                  <div className="rounded-xl border border-white/10 bg-slate-900/30 p-4 mb-6">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Valuation Signals ({val.signals.length})</h3>
                     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                       {val.signals.map((s, i) => (
                         <div key={i} className="flex items-start gap-2 text-sm text-slate-300">
-                          <span className={`mt-1 inline-flex h-2 w-2 shrink-0 rounded-full ${s.type === "positive" ? "bg-emerald-400" : s.type === "negative" ? "bg-red-400" : "bg-amber-400"}`} />
-                          <span>{s.message}</span>
+                          <span className={`mt-1 inline-flex h-2 w-2 shrink-0 rounded-full ${s.type === "strength" ? "bg-emerald-400" : s.type === "concern" ? "bg-red-400" : "bg-amber-400"}`} />
+                          <div className="flex-1">
+                            <span className="font-semibold text-slate-100">{s.metric}</span>
+                            <p className="text-xs mt-0.5">{s.message}</p>
+                            {s.magnitude && <span className={`block text-xs mt-1 font-mono ${s.magnitude > 0 ? "text-emerald-400" : s.magnitude < 0 ? "text-red-400" : "text-amber-400"}`}>{s.magnitude > 0 ? "+" : ""}{s.magnitude} bps</span>}
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  {val.upsidePotentialPct > 0 && (
-                    <div className="mt-4 rounded-xl border border-sky-400/20 bg-sky-400/5 p-4 text-center">
-                      <span className="text-sm text-slate-300">Upside to top-of-range (12x): <span className="font-bold text-emerald-400">{val.upsidePotentialPct}%</span> &mdash; {fmt(val.ebitda * 12)} potential enterprise value</span>
+                  {/* Risk Factors */}
+                  {val.riskFactors.length > 0 && (
+                    <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 p-4">
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-300 mb-2">M&A Due Diligence Risks</h3>
+                      <ul className="space-y-1">
+                        {val.riskFactors.map((risk, i) => (
+                          <li key={i} className="flex items-start gap-2 text-xs text-slate-300">
+                            <span className="mt-1.5 inline-flex h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
+                            {risk}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                 </div>
