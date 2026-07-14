@@ -17,6 +17,8 @@ const allIntegrations: Integration[] = [
   { provider: "servicetitan", label: "ServiceTitan", description: "Field service management, job data, and technician scheduling", category: "field-service", status: "not_connected" },
   { provider: "housecall-pro", label: "Housecall Pro", description: "Dispatch, work orders, and customer management", category: "field-service", status: "not_connected" },
   { provider: "jobber", label: "Jobber", description: "Field service operations and client management", category: "field-service", status: "not_connected" },
+  // Fleet & IoT
+  { provider: "samsara", label: "Samsara", description: "Fleet tracking, vehicle GPS, driver behavior, and trip analytics", category: "fleet", status: "not_connected" },
   // Accounting
   { provider: "quickbooks", label: "QuickBooks Online", description: "General ledger, invoicing, and expense tracking", category: "accounting", status: "not_connected" },
   { provider: "xero", label: "Xero", description: "Cloud accounting and financial reporting", category: "accounting", status: "not_connected" },
@@ -39,11 +41,12 @@ const allIntegrations: Integration[] = [
 ];
 
 const backendProviders = new Set([
-  "servicetitan", "quickbooks", "netsuite", "gusto", "adp", "paychex",
+  "servicetitan", "quickbooks", "netsuite", "gusto", "adp", "paychex", "samsara",
 ]);
 
 const categoryLabels: Record<string, string> = {
   "field-service": "Field Service Management",
+  "fleet": "Fleet & IoT",
   "accounting": "Accounting & GL",
   "payroll": "Payroll",
   "payments": "Payments",
@@ -55,7 +58,7 @@ const categoryLabels: Record<string, string> = {
 
 const statusColors: Record<IntegrationStatus, string> = {
   connected: "bg-emerald-400/10 text-emerald-200 border-emerald-400/20",
-  demo: "bg-brand-400/10 text-brand-200 border-brand-400/20",
+  demo: "bg-sky-400/10 text-sky-200 border-sky-400/20",
   not_connected: "bg-slate-800/50 text-slate-400 border-slate-700/30",
   error: "bg-red-400/10 text-red-200 border-red-400/20",
 };
@@ -120,6 +123,7 @@ export default function IntegrationsPage() {
           <div className="flex items-center gap-6">
             <Link href="/dashboard" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Dashboard</Link>
             <Link href="/integrations" className="text-sm font-medium text-white transition-colors">Integrations</Link>
+            <Link href="/analytics/acquisition" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Acquisition</Link>
           </div>
         </nav>
       </header>
@@ -192,8 +196,33 @@ export default function IntegrationsPage() {
               );
             })}
           </div>
+
+          {/* Data layer note */}
+          <div className="mt-16 rounded-[2rem] border border-white/10 bg-gradient-to-br from-sky-400/[0.06] to-white/[0.02] p-8">
+            <h3 className="text-xl font-semibold text-white mb-3">Data infrastructure</h3>
+            <p className="max-w-3xl text-sm leading-7 text-slate-300">
+              All integrations feed into Ledgera&rsquo;s unified data layer &mdash; a harmonized warehouse that normalizes
+              accounting, payroll, field service, and communications data into a single operating view.
+              This enables cross-system analysis that individual tools cannot provide alone.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              {["BigQuery sync", "Staging export", "Reconciliation engine", "Audit trail"].map((tag) => (
+                <span key={tag} className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-slate-300">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="border-t border-white/5 bg-slate-950/70">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 py-8 lg:flex-row lg:px-10">
+          <span className="text-sm text-slate-400">&copy; {new Date().getFullYear()} Ledgera Global Inc.</span>
+          <Link href="/" className="text-sm text-slate-400 hover:text-white transition-colors">Landing</Link>
+        </div>
+      </footer>
     </div>
   );
 }
